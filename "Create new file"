@@ -1,0 +1,567 @@
+"""
+BOT DE TELEGRAM - AQUILA DIGITAL
+Automatización de publicaciones para canales gratuito y VIP
+"""
+
+import os
+import logging
+from datetime import datetime, time
+from telegram import Bot
+from telegram.error import TelegramError
+import asyncio
+import pytz
+
+# ==================== CONFIGURACIÓN ====================
+
+# IMPORTANTE: Configura estas variables en Render como variables de entorno
+BOT_TOKEN = os.environ.get('BOT_TOKEN', 'TU_TOKEN_AQUI')
+CANAL_GRATUITO = os.environ.get('CANAL_GRATUITO', '@aquiladigital')  # Ejemplo: @aquiladigital
+CANAL_VIP = os.environ.get('CANAL_VIP', '@aquila')  # Ejemplo: @aquila
+TIMEZONE = 'America/Bogota'  # Ajusta según tu zona horaria
+
+# Configurar logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# ==================== CONTENIDOS ====================
+
+# Estructura: {dia: {canal: {tipo, contenido}}}
+CONTENIDOS = {
+    1: {  # LUNES
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """💰 Resultados reales de productos digitales creados con IA
+
+Hace 6 meses no sabía nada de inteligencia artificial...
+
+Hoy mis productos generan ingresos pasivos mientras duermo.
+
+La diferencia no fue "suerte" ni "inversión"...
+
+Fue aprender el SISTEMA correcto.
+
+🔥 En Aquila (VIP) te muestro TODO el proceso técnico paso a paso.
+
+Pero aquí te dejo este insight:
+
+➡️ El 80% de las personas crean productos pero NO saben venderlos.
+➡️ Yo te enseño ambas cosas: CREAR + VENDER.
+
+¿Quieres resultados como estos? 
+Primero aprende el método. 👇"""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """🎯 SESIÓN 1: Cómo elegir el producto digital correcto para TU audiencia
+
+Bienvenido a Aquila 🔥
+
+Hoy arrancamos con lo más importante:
+
+NO todos los productos digitales funcionan para todos.
+
+Te voy a enseñar mi framework de 3 preguntas:
+
+1️⃣ ¿Tu audiencia tiene un problema específico que puedes resolver?
+2️⃣ ¿Estás dispuesto a crear contenido sobre ese tema por 6+ meses?
+3️⃣ ¿Ese producto se puede crear/mejorar con IA?
+
+Si las 3 respuestas son SÍ → Tienes un ganador.
+
+📎 Descarga la plantilla de validación en el grupo
+
+🎙️ Escucha el audio que subí con casos reales (7 min)
+
+Escucha, descarga y mañana analizamos TU idea específica.
+
+¿Preguntas? Escríbeme directo aquí 👇"""
+        }
+    },
+    2: {  # MARTES
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """🤖 Las 5 herramientas de IA que uso TODOS los días para crear productos digitales
+
+1. ChatGPT → Guiones, copys, estructuras
+2. Midjourney → Imágenes profesionales en segundos
+3. Canva con IA → Diseños automáticos
+4. ElevenLabs → Voces realistas para audios
+5. Notion AI → Organización y automatización
+
+La mayoría son GRATIS o tienen versiones gratuitas.
+
+El problema no es la herramienta...
+
+Es NO saber QUÉ crear y CÓMO venderlo.
+
+En Aquila (VIP) te enseño el sistema completo:
+✅ Qué productos crear
+✅ Cómo crearlos con IA
+✅ Cómo venderlos en redes sociales
+✅ Cómo escalar tus ingresos
+
+Herramientas = 10% del éxito
+Estrategia = 90% del éxito
+
+¿Quieres la estrategia? Escríbeme "INFO" 👇"""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """🛠️ SESIÓN 2: Mi plantilla exacta de prompts para crear productos digitales con ChatGPT
+
+Hoy te regalo algo que me tomó MESES perfeccionar:
+
+📎 Mis 15 prompts definitivos para crear:
+- E-books
+- Cursos digitales
+- Guías paso a paso
+- Scripts de videos
+- Copys de ventas
+
+Estos prompts ya tienen la estructura correcta.
+
+Solo cambias el tema y ChatGPT te genera contenido profesional.
+
+⚠️ IMPORTANTE: Estos prompts incluyen:
+✅ Contexto del avatar
+✅ Tono de comunicación
+✅ Estructura específica
+✅ Llamados a la acción
+
+NO son los prompts básicos que encuentras en internet.
+
+📥 Descarga el documento y úsalos hoy mismo.
+
+Mañana vemos cómo DISEÑAR ese contenido visualmente con IA.
+
+¿Dudas con algún prompt? Pregunta aquí 👇"""
+        }
+    },
+    3: {  # MIÉRCOLES
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """⚡ "No necesitas ser experto para vender productos digitales.
+
+Necesitas ser estratégico."
+
+Este fue el mindset que cambió mi juego.
+
+Cuando empecé pensaba:
+❌ "No sé lo suficiente"
+❌ "Hay mucha competencia"
+❌ "Necesito invertir miles"
+
+La realidad:
+✅ Tus primeros $100 los haces siendo ÚTIL, no experto
+✅ La competencia no sabe vender (tú sí aprenderás)
+✅ Con $0 puedes arrancar usando IA
+
+En Aquila (VIP) te muestro:
+
+📍 Cómo crear tu primer producto digital ESTA semana
+📍 Cómo validarlo antes de perder tiempo
+📍 Cómo venderlo en redes sociales sin pagar ads
+
+No es teoría. Es lo que YO hago todos los días.
+
+¿Estás listo para dar el salto? 🚀"""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """🎨 SESIÓN 3: Cómo diseñar tu producto digital en menos de 2 horas usando Canva + IA
+
+Hoy vamos directo a la acción.
+
+Te voy a enseñar mi proceso EXACTO para diseñar:
+- Portadas profesionales
+- Páginas interiores de e-books
+- Slides de presentaciones
+- Posts para promocionar en redes
+
+🔧 HERRAMIENTAS:
+- Canva (gratis)
+- ChatGPT para textos
+- Remove.bg para recortar imágenes
+
+⏱️ TIEMPO REAL: 1 hora 45 minutos
+
+✅ RESULTADO: Un e-book de 20 páginas listo para vender
+
+📎 BONUS: Revisa la carpeta compartida con 50 plantillas pre-diseñadas.
+
+Síguelo tal cual te muestro y tendrás tu producto listo HOY.
+
+¿Lo hiciste? Comparte tu resultado aquí 👇"""
+        }
+    },
+    4: {  # JUEVES
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """🤔 Pregunta del día
+
+He hablado con +200 personas que quieren vender productos digitales...
+
+Y TODOS tienen uno de estos 4 problemas:
+
+1️⃣ No saben QUÉ crear
+2️⃣ No saben CÓMO venderlo
+3️⃣ No tienen AUDIENCIA
+4️⃣ No saben usar las HERRAMIENTAS
+
+Aquí va la verdad dura:
+
+❌ Si no sabes qué crear → Nunca empezarás
+❌ Si no sabes venderlo → Crearás productos que nadie compra
+❌ Si no tienes audiencia → Venderás al vacío
+❌ Si no usas las herramientas → Tardarás 10x más
+
+En Aquila (VIP) resolvemos los 4 en orden:
+
+✅ Identificas tu producto ganador (Día 1-2)
+✅ Aprendes a crearlo con IA (Día 3-5)
+✅ Construyes audiencia orgánica (Día 6-10)
+✅ Lanzas y vendes tu primer producto (Día 11-14)
+
+No es un curso de 6 meses. Es mentoría de 14 días para tu primer venta.
+
+¿Cuál es TU mayor obstáculo? Escríbeme 👇"""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """💰 SESIÓN 4: El sistema de ventas en frío que me genera 15-20 ventas al mes SIN anuncios pagos
+
+Esto es GOLD puro 🔥
+
+Hoy te revelo mi embudo completo:
+
+🎙️ Cómo estructuro mi sistema de ventas orgánicas:
+- Por qué Instagram/TikTok NO son suficientes
+- El poder de WhatsApp + Telegram para cerrar ventas
+- Mi script exacto de seguimiento
+- Cómo manejo objeciones sin ser vendedor insistente
+
+Esto NO es teoría de marketing...
+
+Es mi proceso del día a día:
+
+1️⃣ Contenido de valor en redes (3-5 posts/día)
+2️⃣ CTA hacia WhatsApp/Telegram
+3️⃣ Conversación 1 a 1 humanizada
+4️⃣ Cierre natural de la venta
+5️⃣ Entrega inmediata del producto
+
+🔑 CLAVE: El 80% de mis ventas ocurren en conversaciones privadas, NO en comentarios públicos.
+
+Revisa el documento del embudo y mañana hacemos tu versión personalizada.
+
+¿Preguntas? Escríbeme directo 👇"""
+        }
+    },
+    5: {  # VIERNES
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """✨ Caso real: De 0 a su primera venta en 9 días
+
+📩 Me llegó este mensaje ayer:
+
+"Hace 9 días no tenía ni idea de cómo crear un producto digital. Hoy vendí mi primer e-book a $27. Gracias por enseñarme el sistema completo."
+
+¿Qué hizo diferente?
+
+1️⃣ Dejó de consumir contenido aleatorio
+2️⃣ Siguió UN método probado (el mío)
+3️⃣ Implementó en vez de solo aprender
+4️⃣ Usó IA para acelerar el proceso
+
+NO fue suerte. Fue seguir el proceso correcto.
+
+En Aquila (VIP) te doy el mismo sistema:
+
+✅ Creación de producto con IA
+✅ Estrategia de contenido para vender
+✅ Copy de ventas probado
+✅ Mentoría directa cuando te trancas
+
+Este fin de semana muchos van a "investigar" sobre productos digitales...
+
+Pero solo unos pocos van a CREAR su primer producto.
+
+¿De qué lado quieres estar? 🚀
+
+Escríbeme "QUIERO EMPEZAR" y hablamos."""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """🎥 SESIÓN 5: Revisión 1 a 1 - Analizo TU proyecto en vivo
+
+Es viernes y es momento de revisar tu progreso 💪
+
+Hoy hacemos algo diferente:
+
+📹 Analizo 3 productos que están creando miembros de Aquila:
+
+- Qué está bien
+- Qué hay que mejorar
+- Ajustes rápidos para vender más
+
+👀 Si tu producto aparece en la revisión, recibirás feedback directo.
+
+🔥 IMPORTANTE: Si aún NO has empezado tu producto, este es el momento.
+
+📋 TAREA PARA EL FIN DE SEMANA:
+
+1️⃣ Define tu producto final (tipo, formato, precio)
+2️⃣ Crea el contenido usando los prompts que te di
+3️⃣ Diseña la portada y estructura básica
+4️⃣ Sube un avance al grupo para feedback
+
+El lunes hacemos sesión de copy de ventas + estrategia de lanzamiento.
+
+Para el miércoles, deberías estar vendiendo.
+
+¿Necesitas ayuda con algo específico? Escríbeme AHORA 👇
+
+(Recuerda: Aquí no hay preguntas tontas, solo gente que no pregunta y se queda estancada)"""
+        }
+    },
+    6: {  # SÁBADO
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """💭 Reflexión de sábado
+
+Hoy no voy a venderte nada.
+
+Solo quiero que pienses en esto:
+
+¿Cuántos cursos/videos/posts has consumido sobre "cómo ganar dinero online" en los últimos 6 meses?
+
+Ahora pregúntate:
+
+¿Cuántos productos digitales has CREADO y VENDIDO en esos 6 meses?
+
+Si la respuesta es 0... no es tu culpa.
+
+El 90% del contenido en internet te enseña TEORÍA.
+
+Muy pocos te enseñan IMPLEMENTACIÓN.
+
+Por eso creé Aquila (VIP):
+
+No es un curso.
+No es contenido grabado.
+No es motivación vacía.
+
+Es mentoría directa donde:
+
+✅ Yo creo contigo
+✅ Tú implementas conmigo
+✅ Resolvemos tus obstáculos en tiempo real
+
+Este fin de semana vas a consumir más contenido...
+
+¿O este fin de semana vas a CREAR tu primer producto?
+
+La decisión es tuya 🔑
+
+(Si eliges crear, escríbeme y arrancamos)"""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """📦 RECURSO SEMANAL: Kit completo de assets visuales para tus productos
+
+Buen sábado, equipo 💪
+
+Hoy les dejo un recurso que me pidieron mucho:
+
+📎 KIT DE ASSETS:
+- 100 mockups de productos digitales
+- 50 fondos profesionales para portadas
+- 30 iconos para diseño interior
+- 20 plantillas de Instagram para promocionar productos
+
+Todo listo para usar en Canva o Photoshop.
+
+🎯 CÓMO USARLO:
+
+1. Descarga el ZIP de la carpeta compartida
+2. Importa los assets a tu Canva
+3. Arrastra y personaliza según tu marca
+
+⏰ AHORRA: 5-7 horas de búsqueda de recursos
+
+📊 CHECK-IN SEMANAL:
+
+Responde en los comentarios:
+
+1️⃣ ¿Qué lograste esta semana?
+2️⃣ ¿Dónde te trabaste?
+3️⃣ ¿Qué necesitas para la semana que viene?
+
+Voy a leer cada respuesta y personalizar el contenido de la próxima semana según lo que necesiten.
+
+Este grupo es ACTIVO o no sirve.
+
+Te leo 👇"""
+        }
+    },
+    7: {  # DOMINGO
+        'gratuito': {
+            'tipo': 'texto',
+            'contenido': """🔥 Resumen de la semana: Lo que aprendimos
+
+Esta semana hablamos de:
+
+✅ Resultados reales de productos digitales
+✅ Las 5 herramientas de IA que uso diariamente
+✅ El mindset correcto para empezar
+✅ Los 4 obstáculos principales
+✅ Un caso de éxito real: $27 en 9 días
+
+Y todo esto fue solo GRATIS en este canal.
+
+Ahora imagina lo que pasa en Aquila (VIP):
+
+💎 Tutoriales paso a paso
+💎 Plantillas editables
+💎 Feedback personalizado
+💎 Mentoría directa
+💎 Comunidad activa
+
+La diferencia entre saber y HACER está en la implementación.
+
+🎯 PREGUNTA PARA TI:
+
+¿Qué vas a hacer diferente esta semana?
+
+¿Vas a seguir consumiendo contenido gratis...
+O vas a invertir en ti y crear tu primer producto digital esta semana?
+
+El grupo VIP tiene cupos limitados para mantener la atención personalizada.
+
+Si quieres apartar tu lugar, escríbeme "LISTO" y te mando los detalles 🚀
+
+Nos vemos mañana con energía renovada 💪"""
+        },
+        'vip': {
+            'tipo': 'texto',
+            'contenido': """🎙️ AUDIO DOMINICAL: Preparación mental para la semana de implementación
+
+Buen domingo, familia Aquila 🔥
+
+Hoy sin tutoriales técnicos.
+
+Solo quiero hablar contigo de TÚ a TÚ:
+
+En este mensaje te cuento:
+
+- Por qué los domingos son clave para planificar
+- Mi ritual semanal de productividad
+- Cómo evitar la parálisis por análisis
+- La mentalidad de "hecho es mejor que perfecto"
+
+📅 PLAN PARA LA PRÓXIMA SEMANA:
+
+LUNES: Copy de ventas - Cómo escribir textos que venden
+MARTES: Estrategia de contenido orgánico en Instagram/TikTok
+MIÉRCOLES: Lanzamiento suave - Cómo vender sin "gritar" tu producto
+JUEVES: Manejo de objeciones y cierre de ventas
+VIERNES: Escalamiento - De 1 venta a 10 ventas por semana
+
+📊 META DE LA SEMANA:
+
+Que al menos 5 personas del grupo hagan su PRIMERA VENTA.
+
+Si ya vendiste, la meta es duplicar tus ventas.
+
+🔑 RECUERDA: No estás solo en esto. Aquí estamos todos empujando juntos.
+
+Disfruta tu domingo, descansa bien y el lunes arrancamos con todo 💪
+
+¿Listo para la semana? Reacciona con 🔥"""
+        }
+    }
+}
+
+# ==================== FUNCIONES ====================
+
+async def enviar_mensaje(bot, canal, contenido):
+    """Envía un mensaje a un canal específico"""
+    try:
+        await bot.send_message(
+            chat_id=canal,
+            text=contenido,
+            parse_mode='HTML'
+        )
+        logger.info(f"✅ Mensaje enviado a {canal}")
+        return True
+    except TelegramError as e:
+        logger.error(f"❌ Error al enviar mensaje a {canal}: {e}")
+        return False
+
+async def publicar_contenido_diario():
+    """Publica el contenido del día según el ciclo de 7 días"""
+    bot = Bot(token=BOT_TOKEN)
+    
+    # Determinar qué día del ciclo es (1-7)
+    hoy = datetime.now(pytz.timezone(TIMEZONE))
+    dia_ciclo = (hoy.day % 7) + 1  # Ciclo de 1 a 7
+    
+    logger.info(f"📅 Día del ciclo: {dia_ciclo}")
+    
+    # Obtener contenido del día
+    contenido_dia = CONTENIDOS.get(dia_ciclo)
+    
+    if not contenido_dia:
+        logger.error(f"❌ No hay contenido para el día {dia_ciclo}")
+        return
+    
+    # Publicar en canal gratuito
+    contenido_gratis = contenido_dia['gratuito']['contenido']
+    await enviar_mensaje(bot, CANAL_GRATUITO, contenido_gratis)
+    
+    # Publicar en canal VIP
+    contenido_vip = contenido_dia['vip']['contenido']
+    await enviar_mensaje(bot, CANAL_VIP, contenido_vip)
+    
+    logger.info("✅ Publicaciones del día completadas")
+
+async def verificar_hora_publicacion():
+    """Verifica si es hora de publicar (10:00 AM)"""
+    tz = pytz.timezone(TIMEZONE)
+    while True:
+        ahora = datetime.now(tz)
+        hora_objetivo = time(10, 0)  # 10:00 AM
+        
+        if ahora.time().hour == hora_objetivo.hour and ahora.time().minute == hora_objetivo.minute:
+            logger.info("⏰ Es hora de publicar!")
+            await publicar_contenido_diario()
+            # Esperar 2 minutos para no publicar múltiples veces
+            await asyncio.sleep(120)
+        
+        # Verificar cada minuto
+        await asyncio.sleep(60)
+
+async def main():
+    """Función principal del bot"""
+    logger.info("🚀 Bot iniciado - Esperando hora de publicación (10:00 AM)")
+    logger.info(f"📡 Canal Gratuito: {CANAL_GRATUITO}")
+    logger.info(f"💎 Canal VIP: {CANAL_VIP}")
+    
+    try:
+        await verificar_hora_publicacion()
+    except KeyboardInterrupt:
+        logger.info("🛑 Bot detenido manualmente")
+    except Exception as e:
+        logger.error(f"❌ Error crítico: {e}")
+
+if __name__ == "__main__":
+    # Verificar que el token esté configurado
+    if BOT_TOKEN == 'TU_TOKEN_AQUI':
+        logger.error("❌ ERROR: Debes configurar el BOT_TOKEN en las variables de entorno")
+        exit(1)
+    
+    # Ejecutar el bot
+    asyncio.run(main())
